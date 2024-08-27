@@ -109,15 +109,19 @@ void loop() {
       if (acc_raw<ACC_GRENZE_RUHIG) state=5;                               // wenn wieder ruhig (wieder am Boden) dann Piepen bis Bewegung
       break;    
 
-  case 5:   //Piepser an für 200ms   
+  case 5:  //warten bis das Teil endgültig zur Ruhe kommt - kullert vielleicht noch etwas rum
+      if (millis()-mymil>5000) {mymil=millis(); state=6;}                  // nach 5 Sek sollte es ruhig liegen
+      break;
+
+  case 6:   //Piepser an für 200ms   
       digitalWrite(Piep, true); 
-      if (millis()-mymil>200) {mymil=millis(); state=6;}                              
+      if (millis()-mymil>200) {mymil=millis(); state=7;}                              
       break;    
 
-  case 6:   //Piepser aus für 200ms   
+  case 7:   //Piepser aus für 200ms   
       digitalWrite(Piep, false); 
-      if (millis()-mymil>200) {mymil=millis(); state=5;} 
-      if (acc_raw>ACC_GRENZE_RUHIG) state=0;                               // wenn Bewegung dann zurück
+      if (millis()-mymil>200) {mymil=millis(); state=6;} 
+      if (acc_raw>ACC_GRENZE_RUHIG) state=0;                               // wenn Bewegung z.B. durch Hochheben dann zurück und Piepsen aufhören
       break;    
 
 
