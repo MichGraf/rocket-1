@@ -2,6 +2,7 @@
 // Michael Graf im Rahmen des MakerSpace-EBE-Wasserraketen-Projektes
 // 27.08.2024
 // V1
+// V2 mit Piepser an D10
 
 
 
@@ -55,7 +56,9 @@ void setup() {
   hoehe_init=bmp.readAltitude(1013.25);           //Festlegen des Initialwertes um die aktuelle Höhe anzuzeigen - für Messung nicht relevant
   mymil=millis();
 
-  pinMode(2, INPUT_PULLUP);
+  #define Piep 10
+  pinMode(Piep, OUTPUT);
+  digitalWrite(Piep,false);
 
 }
 
@@ -102,8 +105,21 @@ void loop() {
       break;
 
   case 4:   //warten auf Aufschlag    
-      if (acc_raw<ACC_GRENZE_RUHIG) state=0;                               // wenn wieder ruhig (wieder am Boden) dann von vorne
+      mymil=millis(); 
+      if (acc_raw<ACC_GRENZE_RUHIG) state=5;                               // wenn wieder ruhig (wieder am Boden) dann Piepen bis Bewegung
       break;    
+
+  case 5:   //Piepser an für 200ms   
+      digitalWrite(Piep, true); 
+      if (millis()-mymil>200) {mymil=millis(); state=6;}                              
+      break;    
+
+  case 6:   //Piepser aus für 200ms   
+      digitalWrite(Piep, false); 
+      if (millis()-mymil>200) {mymil=millis(); state=5;} 
+      if (acc_raw>ACC_GRENZE_RUHIG) state=0;                               // wenn Bewegung dann zurück
+      break;    
+
 
   }                                                                        // Anzeigewerte bleiben bestehen und werden dauerhaft angezeigt bis zum nächsten Start = Durchlauf der States
 
