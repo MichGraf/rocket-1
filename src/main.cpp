@@ -15,7 +15,7 @@ Adafruit_MPU6050 mpu;
 Adafruit_SSD1306 display = Adafruit_SSD1306(128, 32, &Wire);
 Adafruit_BMP280 bmp; // I2C
 
-float hoehe_raw, hoehe_init, hoehe_null, hoehe_max, hoehe_anzeige;
+float hoehe_raw, hoehe_init, hoehe_null, hoehe_max, hoehe_anzeige, hoehe_save;
 float acc_raw, acc_null, acc_max, acc_anzeige;
 unsigned long mymil;
 int state=0;
@@ -23,6 +23,7 @@ int state=0;
 #define ACC_GRENZE_RUHIG 20  // m/s2
 #define ACC_GRENZE_START 50  // m/s2
 #define DAUER_SCHEITEL 3000  // ms
+#define HOEHENDIFFERENZ 1    // m  in 2 Sekunden
 
 void setup() {
 
@@ -99,14 +100,19 @@ void loop() {
       break;                                                               // funktioniert nur bei Starts nach oben 
 
   case 3:   //fallen
+      mymil=millis();
       hoehe_anzeige=hoehe_max-hoehe_null;                                  // Werte zur Anzeige ermitteln da Messung jetzt fertig
       acc_anzeige= abs(1000/36/(acc_max-acc_null));                        // in 0 auf 100 in x sec :-) - versteht man besser wie Meter pro Sekunde zum Quadrat
       state=4;
       break;
 
-  case 4:   //warten auf Aufschlag    
-      mymil=millis(); 
-      if (acc_raw<ACC_GRENZE_RUHIG) state=5;                               // wenn wieder ruhig (wieder am Boden) dann Piepen bis Bewegung
+  case 4:   //warten auf Aufschlag                                         // Annahme: wenn sich in 2 Sek die Höhe nicht um z.B. 1 m ändert, ist die Rakete gelandet
+      if (millis()-mymil>2000) {
+        if (hoehe_raw-hoehe_save < HOEHENDIFFERENZ) state=5;
+        hoehe_save=hoehe_raw;
+        mymil=millis();
+      }
+      if (acc_raw>ACC_GRENZE_START) {mymil=millis(); state=5;}            // oder bei heftigem Aufschlag
       break;    
 
   case 5:  //warten bis das Teil endgültig zur Ruhe kommt - kullert vielleicht noch etwas rum
