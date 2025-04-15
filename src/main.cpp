@@ -10,6 +10,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
+#include <Servo.h>
 
 Adafruit_MPU6050 mpu;
 Adafruit_SSD1306 display = Adafruit_SSD1306(128, 32, &Wire);
@@ -25,6 +26,11 @@ int state=0;
 #define DAUER_SCHEITEL 3000  // ms
 #define HOEHENDIFFERENZ 1    // m  in 2 Sekunden
 
+Servo myservo;  // create servo object to control a servo
+
+int servoval;    // variable to read the value from the analog pin
+
+
 void setup() {
 
   mpu.begin();
@@ -32,7 +38,7 @@ void setup() {
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // Address 0x3C for 128x32
   
-  display.display();
+  //display.display();
 
   display.setTextSize(2);
   display.setTextColor(WHITE);
@@ -61,6 +67,9 @@ void setup() {
   pinMode(Piep, OUTPUT);
   digitalWrite(Piep,false);
 
+  #define servopin 9
+  myservo.attach(servopin);  // attaches the servo on pin 9 to the servo object
+
 }
 
 
@@ -77,6 +86,7 @@ void loop() {
   switch(state) {
    
   case 0:   //Rakete am Boden
+  myservo.write(0);
       if (acc_raw>ACC_GRENZE_START) state=1;                               // Bei grosser Beschleunigung sofort Neustart der Messung .... sonst
       else {
         if (acc_raw<ACC_GRENZE_RUHIG) {                                    // liegt ruhig -> Nullwerte anpassen, aber nicht wenn sie bewegt/getragen wird
@@ -100,6 +110,7 @@ void loop() {
       break;                                                               // funktioniert nur bei Starts nach oben 
 
   case 3:   //fallen
+      myservo.write(180);
       mymil=millis();
       hoehe_anzeige=hoehe_max-hoehe_null;                                  // Werte zur Anzeige ermitteln da Messung jetzt fertig
       acc_anzeige= abs(1000/36/(acc_max-acc_null));                        // in 0 auf 100 in x sec :-) - versteht man besser wie Meter pro Sekunde zum Quadrat
@@ -112,14 +123,15 @@ void loop() {
         hoehe_save=hoehe_raw;
         mymil=millis();
       }
-      if (acc_raw>ACC_GRENZE_START) {mymil=millis(); state=5;}            // oder bei heftigem Aufschlag
+      //if (acc_raw>ACC_GRENZE_START) {mymil=millis(); state=5;}            // oder bei heftigem Aufschlag
       break;    
 
   case 5:  //warten bis das Teil endgültig zur Ruhe kommt - kullert vielleicht noch etwas rum
-      if (millis()-mymil>5000) {mymil=millis(); state=6;}                  // nach 5 Sek sollte es ruhig liegen
+      if (millis()-mymil>5000) {mymil=millis(); state=0;}                  // nach 5 Sek sollte es ruhig liegen
       break;
 
-  case 6:   //Piepser an für 200ms   
+  /*
+      case 6:   //Piepser an für 200ms   
       digitalWrite(Piep, true); 
       if (millis()-mymil>200) {mymil=millis(); state=7;}                              
       break;    
@@ -129,7 +141,7 @@ void loop() {
       if (millis()-mymil>200) {mymil=millis(); state=6;} 
       if (acc_raw>ACC_GRENZE_RUHIG) state=0;                               // wenn Bewegung z.B. durch Hochheben dann zurück und Piepsen aufhören
       break;    
-
+*/
 
   }                                                                        // Anzeigewerte bleiben bestehen und werden dauerhaft angezeigt bis zum nächsten Start = Durchlauf der States
 
@@ -137,12 +149,12 @@ void loop() {
   display.clearDisplay();
   display.setCursor(0, 0);
 
-  display.print("S");
+  //display.print("S");
   display.print(state);
 
-  display.print(" H:");                                                     //aktuelle Höhe im Vergleich zum Einschalten - keine Bedeutung für die Messung
-  outp = String(hoehe_raw-hoehe_init,1);
-  display.println(outp);
+  //display.print(" H:");                                                     //aktuelle Höhe im Vergleich zum Einschalten - keine Bedeutung für die Messung
+  //outp = String(hoehe_raw-hoehe_init,1);
+  //display.println(outp);
   
   outp = String(hoehe_anzeige,1);                                           //maximal erreichte Höhe
   display.print(outp);
