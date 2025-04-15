@@ -3,6 +3,7 @@
 // 27.08.2024
 // V1
 // V2 mit Piepser an D10
+// V3 mit Servo an D9
 
 
 
@@ -30,7 +31,13 @@ Servo myservo;  // create servo object to control a servo
 
 int servoval;    // variable to read the value from the analog pin
 
+void setmymil() {
+  mymil=millis();
+}
 
+long testmymil() {
+  return millis()-mymil;
+}
 void setup() {
 
   mpu.begin();
@@ -56,13 +63,12 @@ void setup() {
 
   delay(2000); // Pause for 2 seconds
 
-  acc_max=0;
-  hoehe_max=0;
+  //acc_max=0;
+  //hoehe_max=0;
   hoehe_anzeige=acc_anzeige=0;
 
   hoehe_init=bmp.readAltitude(1013.25);           //Festlegen des Initialwertes um die aktuelle Höhe anzuzeigen - für Messung nicht relevant
-  mymil=millis();
-
+  setmymil();
   #define Piep 10
   pinMode(Piep, OUTPUT);
   digitalWrite(Piep,false);
@@ -71,6 +77,7 @@ void setup() {
   myservo.attach(servopin);  // attaches the servo on pin 9 to the servo object
 
 }
+
 
 
 void loop() {
@@ -100,48 +107,48 @@ void loop() {
 
   case 1:   //steigen
       if (abs(acc_raw)>abs(acc_max)) acc_max=acc_raw;                      // maximale Beschleunigung erfassen
-      mymil=millis();
+      setmymil();
       if (acc_raw<ACC_GRENZE_RUHIG) state=2;                               // wenn Beschleunigung gering, quasi wie ruhig liegen -> Scheitelpunktphase 
       break;    
 
   case 2:   //Scheitelpunktphase
       if (abs(hoehe_raw)>abs(hoehe_max)) hoehe_max=hoehe_raw;              // max. Höhe erfassen (Luftdruck durch Beschleunigung jetzt hoffentlich vernachlässigbar)
-      if (millis()-mymil>DAUER_SCHEITEL) state=3;                          // nach einigen Sekunden Übergang in den freien Fall - anderen Messwerten habe ich nicht getraut
+      if (testmymil()>DAUER_SCHEITEL) state=3;                          // nach einigen Sekunden Übergang in den freien Fall - anderen Messwerten habe ich nicht getraut
       break;                                                               // funktioniert nur bei Starts nach oben 
 
   case 3:   //fallen
       myservo.write(180);
-      mymil=millis();
+      setmymil();
       hoehe_anzeige=hoehe_max-hoehe_null;                                  // Werte zur Anzeige ermitteln da Messung jetzt fertig
       acc_anzeige= abs(1000/36/(acc_max-acc_null));                        // in 0 auf 100 in x sec :-) - versteht man besser wie Meter pro Sekunde zum Quadrat
       state=4;
       break;
 
   case 4:   //warten auf Aufschlag                                         // Annahme: wenn sich in 2 Sek die Höhe nicht um z.B. 1 m ändert, ist die Rakete gelandet
-      if (millis()-mymil>2000) {
+      if (testmymil()>2000) {
         if (hoehe_raw-hoehe_save < HOEHENDIFFERENZ) state=5;
         hoehe_save=hoehe_raw;
-        mymil=millis();
+        setmymil();
       }
       //if (acc_raw>ACC_GRENZE_START) {mymil=millis(); state=5;}            // oder bei heftigem Aufschlag
       break;    
 
   case 5:  //warten bis das Teil endgültig zur Ruhe kommt - kullert vielleicht noch etwas rum
-      if (millis()-mymil>5000) {mymil=millis(); state=0;}                  // nach 5 Sek sollte es ruhig liegen
+      if (testmymil()>5000) {setmymil(); state=6;}                  // nach 5 Sek sollte es ruhig liegen
       break;
 
-  /*
+  
       case 6:   //Piepser an für 200ms   
       digitalWrite(Piep, true); 
-      if (millis()-mymil>200) {mymil=millis(); state=7;}                              
+      if (testmymil()>200) {setmymil(); state=7;}                              
       break;    
 
   case 7:   //Piepser aus für 200ms   
       digitalWrite(Piep, false); 
-      if (millis()-mymil>200) {mymil=millis(); state=6;} 
+      if (testmymil()>200) {setmymil(); state=6;} 
       if (acc_raw>ACC_GRENZE_RUHIG) state=0;                               // wenn Bewegung z.B. durch Hochheben dann zurück und Piepsen aufhören
       break;    
-*/
+
 
   }                                                                        // Anzeigewerte bleiben bestehen und werden dauerhaft angezeigt bis zum nächsten Start = Durchlauf der States
 
@@ -150,18 +157,18 @@ void loop() {
   display.setCursor(0, 0);
 
   //display.print("S");
-  display.print(state);
+  display.println(state);
 
-  //display.print(" H:");                                                     //aktuelle Höhe im Vergleich zum Einschalten - keine Bedeutung für die Messung
+  //display.print(" ");                                                     //aktuelle Höhe im Vergleich zum Einschalten - keine Bedeutung für die Messung
   //outp = String(hoehe_raw-hoehe_init,1);
   //display.println(outp);
   
   outp = String(hoehe_anzeige,1);                                           //maximal erreichte Höhe
   display.print(outp);
 
-  display.print(" ");
+  //display.print(" ");
   outp = String(acc_anzeige,2);                                             //maximale Beschleunigung
-  display.print(outp);
+  display.print(" "+outp);
   display.display();
   
 
