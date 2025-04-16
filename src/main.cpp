@@ -24,7 +24,7 @@ int state=0;
 
 #define ACC_GRENZE_RUHIG 20  // m/s2
 #define ACC_GRENZE_START 50  // m/s2
-#define DAUER_SCHEITEL 3000  // ms
+#define DAUER_SCHEITEL 500  // ms   war 3000
 #define HOEHENDIFFERENZ 1    // m  in 2 Sekunden
 
 Servo myservo;  // create servo object to control a servo
@@ -49,7 +49,7 @@ void setup() {
 
   display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setRotation(0);
+  //display.setRotation(0);
 
   bmp.begin(BMP280_ADDRESS_ALT, BMP280_CHIPID);
 
@@ -65,13 +65,13 @@ void setup() {
 
   //acc_max=0;
   //hoehe_max=0;
-  hoehe_anzeige=acc_anzeige=0;
+  //hoehe_anzeige=acc_anzeige=0;
 
   hoehe_init=bmp.readAltitude(1013.25);           //Festlegen des Initialwertes um die aktuelle Höhe anzuzeigen - für Messung nicht relevant
   setmymil();
   #define Piep 10
   pinMode(Piep, OUTPUT);
-  digitalWrite(Piep,false);
+  //digitalWrite(Piep,false);
 
   #define servopin 9
   myservo.attach(servopin);  // attaches the servo on pin 9 to the servo object
@@ -130,18 +130,20 @@ void loop() {
         hoehe_save=hoehe_raw;
         setmymil();
       }
-      //if (acc_raw>ACC_GRENZE_START) {mymil=millis(); state=5;}            // oder bei heftigem Aufschlag
+      
+      if (acc_raw>ACC_GRENZE_START) {setmymil(); state=5;}            // oder bei heftigem Aufschlag
       break;    
 
   case 5:  //warten bis das Teil endgültig zur Ruhe kommt - kullert vielleicht noch etwas rum
       if (testmymil()>5000) {setmymil(); state=6;}                  // nach 5 Sek sollte es ruhig liegen
       break;
 
-  
-      case 6:   //Piepser an für 200ms   
+
+  case 6:   //Piepser an für 200ms   
       digitalWrite(Piep, true); 
       if (testmymil()>200) {setmymil(); state=7;}                              
       break;    
+
 
   case 7:   //Piepser aus für 200ms   
       digitalWrite(Piep, false); 
